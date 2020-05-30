@@ -35,7 +35,7 @@ function logger($message) {
     $ua = $_SERVER['HTTP_USER_AGENT'];
     $log  = date("Y-m-d H:i:s")." IP:$ip ".$message.PHP_EOL;
     file_put_contents('/opt/logs/freescan_'.date("j.n.Y").'.log', $log, FILE_APPEND);
-    if($debug == "1") { echo $log; }
+    //if($debug == "1") { echo $log; }
 }
 
 function check_blacklist($target)

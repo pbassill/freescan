@@ -1,3 +1,4 @@
 <?php
 
+$logpath = "/path/to/your/log/dir";
 $pentesttools_apikey = "xxx";
