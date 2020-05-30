@@ -12,7 +12,7 @@
 ## Todo
 Add loader to front end to stop page timing out.
 
-## File
+## Files
  * freescan.php - This is the core code
  * functions.php - Wordpress plugin functions file
  * form.php - This is the form for the website
