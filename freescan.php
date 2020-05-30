@@ -18,7 +18,7 @@ include('blacklist.php');
 
 function ptt($payload)
 {
-    global $pentesttools_apikey";
+    global $pentesttools_apikey;
     $api_url = "https://pentest-tools.com/api?key=$pentesttools_apikey";
     $ch = curl_init($api_url);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
