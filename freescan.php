@@ -272,7 +272,7 @@ function freescan()
 
             } else {
                 echo "<div class=\"alert alert-danger\" role=\"alert\">
-                    <strong>An error has occured.</strong><br /><br />There is something wrong with the site $target and are unable to scan it at this time. Please try again later.
+                    <strong>An error has occured.</strong><br /><br />There is something wrong with the site $target and are unable to scan it at this time. It could be that you need to add the prefix 'www' or remove the 'www' from the URL. Please try again. If it continues to fail, please try back later as we check the logs often.
                     </div><p>&nbsp;</p>";
                 include('form.php');
             }
