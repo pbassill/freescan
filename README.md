@@ -4,7 +4,7 @@
 
  * Plugin URI:  https://www.hedgehogsecurity.gi/secure-gi
  * Description: Secure GI - free website vulnerability scanner
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      Peter Bassill
  * Author URI:  https://peterbassill.com
  * License:     CC BY 4.0
