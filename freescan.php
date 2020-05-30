@@ -12,12 +12,13 @@
  *
  * */
 
+include('config.php');
 include('functions.php');
 include('blacklist.php');
 
 function ptt($payload)
 {
-    $pentesttools_apikey = "9525c4535b9c1b22b39fecef501551e4e5cf89ac";
+    global $pentesttools_apikey";
     $api_url = "https://pentest-tools.com/api?key=$pentesttools_apikey";
     $ch = curl_init($api_url);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
