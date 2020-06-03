@@ -4,11 +4,11 @@
  * Plugin Name: Secure GI Free Scan
  * Plugin URI:  https://www.hedgehogsecurity.gi/secure-gi
  * Description: Secure GI - free website vulnerability scanner
- * Version:     1.0.0
+ * Version:     1.0.2
  * Author:      Peter Bassill
  * Author URI:  https://peterbassill.com
- * License:     Commercial
- * License URI: https://peterbassill.com/secure-gi
+ * License:     CC BY 4.0
+ * License URI: https://creativecommons.org/licenses/by/4.0/
  *
  * */
 
@@ -48,6 +48,11 @@ function check_blacklist($target)
     }
 }
 
+function error_msg($subject, $error)
+{
+    echo "<div class=\"alert alert-danger\" role=\"alert\"><strong>$subject</strong><br /><br />$error</div>";
+}
+
 function freescan()
 {
     if (ISSET($_POST['submit'])) {
@@ -59,18 +64,14 @@ function freescan()
         // Check for authorisation
         if($auth != 1){
             logger("CIP:$cip TARGET:$target STATUS:ERROR - Auth not checked.");
-            echo "<div class=\"alert alert-danger\" role=\"alert\">
-                    <strong>Not authorised.</strong><br /><br />Please confirm you have authorisation to scan this URL.
-		    </div>";
+            error_msg('Not Authorised', 'Please confirm you have authorisation to scan this URL.');
             include('form.php');
         }
 
         // Check target against blacklist
         elseif(check_blacklist($target)) {
             logger("CIP:$cip TARGET:$target STATUS:ERROR - Target is in blacklist.");
-            echo "<div class=\"alert alert-danger\" role=\"alert\">
-                    <strong>Prohibited Target.</strong><br /><br />You attempted to scan a prohibited URL. That is forbidden.
-		    </div>";
+            error_msg('Prohibited Target.', 'You attempted to scan a prohibited URL. That is forbidden.');
             include('form.php');
         }
 
