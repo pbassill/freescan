@@ -1,5 +1,14 @@
 <?php
 
+
+include('dbconfig.php');
+$charset = 'utf8mb4';
+$dsn = "mysql:host=$host;dbname=$db;charset=$charset";
+$options = [ PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false,];
+
+try { $pdo = new PDO($dsn, $user, $pass, $options); }
+catch (\PDOException $e) { throw new \PDOException($e->getMessage(), (int)$e->getCode()); }
+
 function ptt($payload)
 {
 	global $pentesttools_apikey;
@@ -17,6 +26,11 @@ function logger($message) {
 	$ip = $_SERVER['REMOTE_ADDR'];
 	$log  = date("Y-m-d H:i:s")." IP:$ip ".$message.PHP_EOL;
 	file_put_contents('/opt/logs/freescan_'.date("j.n.Y").'.log', $log, FILE_APPEND);
+}
+
+function dblogger($cip,$target,$status) {
+	$date = time();
+	$pdo->query("INSERT INTO log (date,cip,target,status) VALUES ('$date','$cip','$target','$status')");
 }
 
 function check_blacklist($target)
