@@ -1,25 +1,37 @@
 <?php
 
-// remove version from head
-remove_action('wp_head', 'wp_generator');
+function ptt($payload)
+{
+	global $pentesttools_apikey;
+	$api_url = "https://pentest-tools.com/api?key=$pentesttools_apikey";
+	$ch = curl_init($api_url);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+	curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	$json_data = curl_exec($ch);
+	curl_close($ch);
+	return $json_data;
+}
 
-// remove version from rss
-add_filter('the_generator', '__return_empty_string');
+function logger($message) {
+	$ip = $_SERVER['REMOTE_ADDR'];
+	$log  = date("Y-m-d H:i:s")." IP:$ip ".$message.PHP_EOL;
+	file_put_contents('/opt/logs/freescan_'.date("j.n.Y").'.log', $log, FILE_APPEND);
+}
 
-// remove version from scripts and styles
-function shapeSpace_remove_version_scripts_styles($src) {
-	if (strpos($src, 'ver=')) {
-		$src = remove_query_arg('ver', $src);
+function check_blacklist($target)
+{
+	global $blacklist;
+	foreach ($blacklist as $url) {
+		if (stripos($target, $url) !== FALSE) {
+			return true;
+		}
 	}
-	return $src;
 }
-add_filter('style_loader_src', 'shapeSpace_remove_version_scripts_styles', 9999);
-add_filter('script_loader_src', 'shapeSpace_remove_version_scripts_styles', 9999);
 
-function removeHeadLinks() {
-	remove_action('wp_head', 'rsd_link');
-	remove_action('wp_head', 'wlwmanifest_link');
+function error_msg($subject, $error)
+{
+	echo "<div class=\"alert alert-danger\" role=\"alert\"><strong>$subject</strong><br /><br />$error</div>";
 }
-add_action('init', 'removeHeadLinks');
 
 ?>
