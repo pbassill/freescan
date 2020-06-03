@@ -12,43 +12,10 @@
  *
  * */
 
+include('securewp.php');
 include('config.php');
 include('functions.php');
 include('blacklist.php');
-
-function ptt($payload)
-{
-    global $pentesttools_apikey;
-    $api_url = "https://pentest-tools.com/api?key=$pentesttools_apikey";
-    $ch = curl_init($api_url);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    $json_data = curl_exec($ch);
-    curl_close($ch);
-    return $json_data;
-}
-
-function logger($message) {
-    $ip = $_SERVER['REMOTE_ADDR'];
-    $log  = date("Y-m-d H:i:s")." IP:$ip ".$message.PHP_EOL;
-    file_put_contents('/opt/logs/freescan_'.date("j.n.Y").'.log', $log, FILE_APPEND);
-}
-
-function check_blacklist($target)
-{
-    global $blacklist;
-    foreach ($blacklist as $url) {
-        if (stripos($target, $url) !== FALSE) {
-            return true;
-        }
-    }
-}
-
-function error_msg($subject, $error)
-{
-    echo "<div class=\"alert alert-danger\" role=\"alert\"><strong>$subject</strong><br /><br />$error</div>";
-}
 
 function freescan()
 {
@@ -80,69 +47,34 @@ function freescan()
             // Check for trailing / and remove it
             $target = rtrim($target, "/");
 
-            // Send the scan job to webscan at Pentest Tools
-            $payload = "{\"op\":\"start_scan\",\"tool_id\":170,\"tool_params\":{\"target\":\"$target\",\"scan_type\":\"quick\",\"follow_redirects\":\"true\"}}";
-            $json_data = ptt($payload);
-            $json = json_decode($json_data);
-            $scan_id = $json->scan_id;
-            $scan_status = $json->scan_status;
-            logger("CIP:$cip TARGET:$target STATUS:$scan_status");
+            // Replace the below section with sending the job to a worker and monitor DB for output.
+            exec("php scan.php $target $cip > /dev/null &");
 
-            // If the scan is waiting, loop and keep checking it every 5 seconds
-            if ($scan_status = "waiting") {
-                while ($scan_status == "waiting") {
-                    sleep(5);
-                    $payload = "{\"op\":\"get_scan_status\",\"scan_id\":$scan_id}";
-                    $json_data = ptt($payload);
-                    $json = json_decode($json_data);
-                    $scan_status = $json->scan_status;
-                    logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-                }
-            }
-
-            // If the scan is running, loop and keep checking it every 5 seconds
+            // Get the scan status and update the UI
             if ($scan_status = "running") {
-                while ($scan_status == "running") {
-                    sleep(5);
-                    $payload = "{\"op\":\"get_scan_status\",\"scan_id\":$scan_id}";
-                    $json_data = ptt($payload);
-                    $json = json_decode($json_data);
-                    $scan_status = $json->scan_status;
-                    logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-                }
+                // update the ui and refresh
             }
 
             if ($scan_status == "finished") {
                 // Get the scan output
-                logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-                $payload = "{\"op\":\"get_output\",\"scan_id\":$scan_id,\"output_format\":\"json\"}";
-                $json = ptt($payload);
-                $json_report_data = json_decode($json);
-
-                // Delete the scan from Pentest Tools
-                $payload = "{\"op\":\"delete_scan\",\"scan_id\":$scan_id}";
-                ptt($payload);
-                logger("CIP:$cip TARGET:$target STATUS:deleted");
-
-                // Format the output JSON into a nice report
-                echo "<h3>Scan Report</h3>";
-                echo "<h4>Website vulnerability scan report for: $target</h4>";
-
-                $high_count = $json_report_data->scan_info->output_summary->high;
-                $medium_count = $json_report_data->scan_info->output_summary->medium;
-                $low_count = $json_report_data->scan_info->output_summary->low;
-                $info_count = $json_report_data->scan_info->output_summary->info;
+                $stmt = $pdo->query("SELECT * FROM scans WHERE cip=$cip AND target=$target");
+                for($stmt as $row) {
+                    $high_count = $row['high_count'];
+                    $medium_count = $row['medium_count'];
+                    $low_count = $row['low_count'];
+                    $info_count = $row['info_count'];
+                    $start = $row['start'];
+                    $stop = $row['stop'];
+                    $duration = $row['duration'];
+                    $num_test = $row['num_tests'];
+                    $nun_finished_tests = $row['num_finished_tests'];
+                }
 
                 echo "<h5>Overall Risk Level: ";
-                if ($high_count >= '1') {
-                    echo "<button type=\"button\" class=\"btn btn-danger\">High</button>";
-                } elseif ($medium_count >= '1') {
-                    echo "<button type=\"button\" class=\"btn btn-warning\">Medium</button>";
-                } elseif ($low_count >= '1') {
-                    echo "<button type=\"button\" class=\"btn btn-success\">Low</button>";
-                } else {
-                    echo "<button type=\"button\" class=\"btn btn-info\">Zero</button>";
-                }
+                if ($high_count >= '1') { echo "<button type=\"button\" class=\"btn btn-danger\">High</button>";}
+                elseif ($medium_count >= '1') {echo "<button type=\"button\" class=\"btn btn-warning\">Medium</button>";}
+                elseif ($low_count >= '1') {echo "<button type=\"button\" class=\"btn btn-success\">Low</button>";}
+                else {echo "<button type=\"button\" class=\"btn btn-info\">Zero</button>";
 
                 echo "<p>&nbsp;</p>";
                 echo "<h5>Vulnerability Summary</h5>";
@@ -154,110 +86,41 @@ function freescan()
                 echo "<tr><td>Informational</td><td>$info_count</td></tr></tbody></table>";
                 echo "<p>&nbsp;</p>";
 
-                $start = $json_report_data->scan_info->start_time;
-                $stop = $json_report_data->scan_info->end_time;
-                $duration = $json_report_data->scan_info->duration;
-                $num_tests = $json_report_data->scan_info->num_tests;
-                $num_finished_tests = $json_report_data->scan_info->num_finished_tests;
 
                 echo "<h4>Findings</h4>";
-                $arrayLength = count($json_report_data->scan_output->scan_tests);
-                $i = 0;
-                while ($i < $arrayLength) {
-                    $name = $json_report_data->scan_output->scan_tests[$i]->vuln_description;
-                    $description = $json_report_data->scan_output->scan_tests[$i]->risk_description;
-                    $vuln_evidence = $json_report_data->scan_output->scan_tests[$i]->vuln_evidence->data;
-                    $risklevel = $json_report_data->scan_output->scan_tests[$i]->risk_level;
-                    $severity = "<button type=\"button\" class=\"btn btn-info btn-sm\">Informational</button>";
-                    if ($risklevel == "0") {
-                        $severity = "<button type=\"button\" class=\"btn btn-info btn-sm\">Informational</button>";
-                    }
-                    if ($risklevel == "1") {
-                        $severity = "<button type=\"button\" class=\"btn btn-success btn-sm\">Low</button>";
-                    }
-                    if ($risklevel == "2") {
-                        $severity = "<button type=\"button\" class=\"btn btn-warning btn-sm\">Medium</button>";
-                    }
-                    if ($risklevel == "3") {
-                        $severity = "<button type=\"button\" class=\"btn btn-danger btn-sm\">High</button>";
-                    }
-                    $evidence = '<tr>';
-                    if (is_array($vuln_evidence)) {
-                        $evidence_Length = count($vuln_evidence);
-                        $ecount = 0;
-                        while ($ecount < $evidence_Length) {
-                            if (ISSET($vuln_evidence[$ecount][0])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][0]);
-                                $vdata = str_replace(" 						", " ", $vdata);
-                                $vdata = preg_replace("/<img[^>]+>/i", "", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][1])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][1]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $vdata = preg_replace("/<img[^>]+>/i", "", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][2])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][2]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][3])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][3]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][4])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][4]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][5])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][5]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][6])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][6]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][7])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][7]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            if (ISSET($vuln_evidence[$ecount][8])) {
-                                $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][8]);
-                                $vdata = str_replace("                                          ", " ", $vdata);
-                                $evidence .= "<td>$vdata</td>";
-                            }
-                            $evidence .= "</tr>";
-                            $ecount++;
-                        }
-                    } else {
-                        if (EMPTY($evidence)) {
-                            $evidence = "No evidence was collected for this vulnerability";
-                        }
-                    }
-                    $recommendation = $json_report_data->scan_output->scan_tests[$i]->recommendation;
-                    if ($risklevel == "0") {
-                        echo "<br />";
-                        echo "<h5>$name</h5>";
-                        echo "<hr>";
-                    } else {
-                        echo "<br />";
-                        echo "<h5>$name</h5>";
-                        echo "<p>Risk level: $severity<br /></p>";
-                        echo "<table class=\"table table-striped table-bordered\">$evidence</table><br />";
-                        echo "<p>Risk description:<br /> $description</p>";
-                        echo "<p>Recommendation:<br /> $recommendation</p>";
-                        echo "<br />";
-                        echo "<hr>";
-                    }
-                    $i++;
+
+                $stmt = $pdo->query("SELECT * FROM vulnerabilities WHERE cip=$cip AND target=$target");
+                for($stmt as $row) {
+                    $name = $row['name'];
+                    $description = $row['description'];
+                    $evidence = $row['vuln_evidence'];
+                    $risklevel = $row['risklevel'];
+                    $evidence = $row['evidence'];
+                    $description = $row['description'];
+                    $recommendation = $row['recommendaton'];
                 }
+
+                $severity = "<button type=\"button\" class=\"btn btn-info btn-sm\">Informational</button>";
+                if ($risklevel == "0") { $severity = "<button type=\"button\" class=\"btn btn-info btn-sm\">Informational</button>";}
+                if ($risklevel == "1") {$severity = "<button type=\"button\" class=\"btn btn-success btn-sm\">Low</button>";}
+                if ($risklevel == "2") {$severity = "<button type=\"button\" class=\"btn btn-warning btn-sm\">Medium</button>";}
+                if ($risklevel == "3") {$severity = "<button type=\"button\" class=\"btn btn-danger btn-sm\">High</button>";}
+
+                if ($risklevel == "0") {
+                    echo "<br />";
+                    echo "<h5>$name</h5>";
+                    echo "<hr>";
+                } else {
+                    echo "<br />";
+                    echo "<h5>$name</h5>";
+                    echo "<p>Risk level: $severity<br /></p>";
+                    echo "<table class=\"table table-striped table-bordered\">$evidence</table><br />";
+                    echo "<p>Risk description:<br /> $description</p>";
+                    echo "<p>Recommendation:<br /> $recommendation</p>";
+                    echo "<br />";
+                    echo "<hr>";
+                }
+
                 echo "<p>&nbsp;</p>";
                 echo "<h5>Scan Statistics</h5>";
                 echo "<table class=\"table table-striped table-bordered\">";
