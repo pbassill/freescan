@@ -12,7 +12,7 @@ $json = json_decode($json_data);
 $scan_id = $json->scan_id;
 $scan_status = $json->scan_status;
 logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-dblogger($cip,$target,$status);
+dblogger($cip,$target,$scan_status);
 
 // If the scan is waiting, loop and keep checking it every 5 seconds
 if ($scan_status = "waiting") {
@@ -23,7 +23,7 @@ if ($scan_status = "waiting") {
         $json = json_decode($json_data);
         $scan_status = $json->scan_status;
         logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-        dblogger($cip,$target,$status);
+        dblogger($cip,$target,$scan_status);
     }
 }
 
@@ -36,14 +36,14 @@ if ($scan_status = "running") {
         $json = json_decode($json_data);
         $scan_status = $json->scan_status;
         logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-        dblogger($cip,$target,$status);
+        dblogger($cip,$target,$scan_status);
     }
 }
 
 if ($scan_status == "finished") {
     // Get the scan output
     logger("CIP:$cip TARGET:$target STATUS:$scan_status");
-    dblogger($cip,$target,$status);
+    dblogger($cip,$target,$scan_status);
     $payload = "{\"op\":\"get_output\",\"scan_id\":$scan_id,\"output_format\":\"json\"}";
     $json = ptt($payload);
     $json_report_data = json_decode($json);
@@ -52,7 +52,7 @@ if ($scan_status == "finished") {
     $payload = "{\"op\":\"delete_scan\",\"scan_id\":$scan_id}";
     ptt($payload);
     logger("CIP:$cip TARGET:$target STATUS:deleted");
-    dblogger($cip,$target,$status);
+    dblogger($cip,$target,"deleted");
 
     $high_count = $json_report_data->scan_info->output_summary->high;
     $medium_count = $json_report_data->scan_info->output_summary->medium;
