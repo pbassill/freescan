@@ -30,12 +30,9 @@ function ptt($payload)
 }
 
 function logger($message) {
-    global $debug;
     $ip = $_SERVER['REMOTE_ADDR'];
-    $ua = $_SERVER['HTTP_USER_AGENT'];
     $log  = date("Y-m-d H:i:s")." IP:$ip ".$message.PHP_EOL;
     file_put_contents('/opt/logs/freescan_'.date("j.n.Y").'.log', $log, FILE_APPEND);
-    //if($debug == "1") { echo $log; }
 }
 
 function check_blacklist($target)
@@ -149,7 +146,7 @@ function freescan()
 
                 echo "<p>&nbsp;</p>";
                 echo "<h5>Vulnerability Summary</h5>";
-                echo "<table class=\"table table-striped table-bordered\" width=\"100%\">";
+                echo "<table class=\"table table-striped table-bordered\">";
                 echo "<thead><tr><th>Criticality</th><th>Count</th></tr></thead>";
                 echo "<body><tr><td>High</td><td>$high_count</td></tr>";
                 echo "<tr><td>Medium</td><td>$medium_count</td></tr>";
@@ -171,6 +168,7 @@ function freescan()
                     $description = $json_report_data->scan_output->scan_tests[$i]->risk_description;
                     $vuln_evidence = $json_report_data->scan_output->scan_tests[$i]->vuln_evidence->data;
                     $risklevel = $json_report_data->scan_output->scan_tests[$i]->risk_level;
+                    $severity = "<button type=\"button\" class=\"btn btn-info btn-sm\">Informational</button>";
                     if ($risklevel == "0") {
                         $severity = "<button type=\"button\" class=\"btn btn-info btn-sm\">Informational</button>";
                     }
@@ -183,7 +181,6 @@ function freescan()
                     if ($risklevel == "3") {
                         $severity = "<button type=\"button\" class=\"btn btn-danger btn-sm\">High</button>";
                     }
-                    $status = $json_report_data->scan_output->scan_tests[$i]->status;
                     $evidence = '<tr>';
                     if (is_array($vuln_evidence)) {
                         $evidence_Length = count($vuln_evidence);
@@ -192,13 +189,13 @@ function freescan()
                             if (ISSET($vuln_evidence[$ecount][0])) {
                                 $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][0]);
                                 $vdata = str_replace(" 						", " ", $vdata);
-                                $vdata = preg_replace("/<img[^>]+\>/i", "", $vdata);
+                                $vdata = preg_replace("/<img[^>]+>/i", "", $vdata);
                                 $evidence .= "<td>$vdata</td>";
                             }
                             if (ISSET($vuln_evidence[$ecount][1])) {
                                 $vdata = str_replace("                 ", " ", $vuln_evidence[$ecount][1]);
                                 $vdata = str_replace("                                          ", " ", $vdata);
-                                $vdata = preg_replace("/<img[^>]+\>/i", "", $vdata);
+                                $vdata = preg_replace("/<img[^>]+>/i", "", $vdata);
                                 $evidence .= "<td>$vdata</td>";
                             }
                             if (ISSET($vuln_evidence[$ecount][2])) {
@@ -253,7 +250,7 @@ function freescan()
                         echo "<br />";
                         echo "<h5>$name</h5>";
                         echo "<p>Risk level: $severity<br /></p>";
-                        echo "<table class=\"table table-striped table-bordered\" width=\"100%\">$evidence</table><br />";
+                        echo "<table class=\"table table-striped table-bordered\">$evidence</table><br />";
                         echo "<p>Risk description:<br /> $description</p>";
                         echo "<p>Recommendation:<br /> $recommendation</p>";
                         echo "<br />";
@@ -263,7 +260,7 @@ function freescan()
                 }
                 echo "<p>&nbsp;</p>";
                 echo "<h5>Scan Statistics</h5>";
-                echo "<table class=\"table table-striped table-bordered\" width=\"100%\">";
+                echo "<table class=\"table table-striped table-bordered\">";
                 echo "<tr><td>Scan Start Time</td><td>$start</td></tr>";
                 echo "<tr><td>Scan Finish Time</td><td>$stop</td></tr>";
                 echo "<tr><td>Scan Duration</td><td>$duration seconds</td></tr>";
