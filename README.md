@@ -11,7 +11,7 @@
  * License URI: https://creativecommons.org/licenses/by/4.0/
 
 ## About
-This is a plugin I created for our website, https://www.hedgehogsecurity.co.uk.
+This is a plugin I created for our website, https://www.hedgehogsecurity.co.uk. You can read more about our work at https://www.hedgehogsecurity.co.uk/penetration-testing.
 
 ## Install Instructions
 Download the repo and either zip it and install into wordpress via the UI or copy to your wp-contents/plugins folder.
